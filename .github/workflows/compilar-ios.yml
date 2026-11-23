@@ -1,0 +1,30 @@
+name: Compilar iOS
+
+on:
+  push:
+    paths:
+      - "ios/**"
+      - ".github/workflows/compilar-ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto de Xcode
+        run: xcodegen generate
+
+      - name: Compilar (simulador, sin firmar)
+        run: |
+          set -o pipefail
+          xcodebuild -project DuoKeyboard.xcodeproj -scheme DuoKeyboard \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -80
