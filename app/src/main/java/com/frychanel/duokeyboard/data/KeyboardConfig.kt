@@ -35,6 +35,7 @@ enum class ThemeId(val etiqueta: String) {
 @Serializable
 enum class KeyStyle(val etiqueta: String) {
     SOLIDA("Sólida"),
+    CRISTAL("Cristal líquido"),
     CONTORNO("Contorno"),
     MINIMAL("Minimal")
 }
@@ -141,7 +142,7 @@ object ConfigRepository {
 private val TEMAS_GRATIS = setOf(ThemeId.IOS_OSCURO, ThemeId.IOS_CLARO)
 
 fun ThemeId.esPremium() = this !in TEMAS_GRATIS
-fun KeyStyle.esPremium() = this != KeyStyle.SOLIDA
+fun KeyStyle.esPremium() = this == KeyStyle.CONTORNO || this == KeyStyle.MINIMAL
 fun BackgroundType.esPremium() = this != BackgroundType.TEMA
 
 /** Siguiente tema para el botón de la barra (sin Premium solo recorre los gratis). */

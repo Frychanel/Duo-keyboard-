@@ -233,16 +233,23 @@ struct TeclaView: View {
         case .solida: return config.opacidadTecla
         case .contorno: return config.opacidadTecla * (resaltada ? 0.95 : 0.3)
         case .minimal: return resaltada ? config.opacidadTecla : 0
+        case .cristal: return config.opacidadTecla
         }
     }
 
     var body: some View {
         let forma = RoundedRectangle(cornerRadius: CGFloat(config.radioTecla), style: .continuous)
         ZStack {
+            if config.estiloTecla == .cristal {
+                CristalTecla(forma: forma, tinte: colorBase, presionada: presionada,
+                             resaltada: enterAccion || shiftActivo, opacidad: config.opacidadTecla)
+            }
             if config.sombra && config.estiloTecla == .solida {
                 forma.fill(tema.sombra.opacity(config.opacidadTecla)).offset(y: 1.2)
             }
-            forma.fill((presionada ? tema.presionada : colorBase).opacity(opacidadRelleno))
+            if config.estiloTecla != .cristal {
+                forma.fill((presionada ? tema.presionada : colorBase).opacity(opacidadRelleno))
+            }
             if config.bordes || config.estiloTecla == .contorno {
                 forma.stroke(config.estiloTecla == .contorno ? colorTexto.opacity(0.45) : tema.borde, lineWidth: 1)
             }
@@ -373,5 +380,45 @@ struct TeclaView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Cristal líquido
+
+/// Tecla de vidrio: Liquid Glass real en iOS 26; en versiones anteriores, vidrio esmerilado.
+struct CristalTecla: View {
+    let forma: RoundedRectangle
+    let tinte: Color
+    let presionada: Bool
+    let resaltada: Bool
+    let opacidad: Double
+
+    var body: some View {
+        Group {
+            #if compiler(>=6.2)
+            if #available(iOS 26.0, *) {
+                forma.fill(Color.white.opacity(presionada ? 0.18 : 0.001))
+                    .glassEffect(resaltada ? Glass.regular.tint(tinte) : Glass.regular, in: forma)
+            } else {
+                respaldo
+            }
+            #else
+            respaldo
+            #endif
+        }
+        .opacity(opacidad)
+    }
+
+    private var respaldo: some View {
+        ZStack {
+            forma.fill(.ultraThinMaterial)
+            forma.fill(resaltada ? tinte.opacity(0.85) : Color.white.opacity(presionada ? 0.30 : 0.10))
+            forma.fill(LinearGradient(colors: [.white.opacity(0.30), .clear], startPoint: .top, endPoint: .center))
+            forma.strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.6), .white.opacity(0.08)], startPoint: .top, endPoint: .bottom),
+                lineWidth: 1
+            )
+        }
+        .shadow(color: .black.opacity(0.15), radius: 1.5, y: 1)
     }
 }

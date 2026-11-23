@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
@@ -409,10 +410,35 @@ private fun Tecla(env: Env, key: Key, modifier: Modifier) {
             .padding(horizontal = (cfg.espaciado / 2f).dp, vertical = (cfg.espaciado / 2f + 1f).dp)
             .drawBehind {
                 val cr = CornerRadius(radio.toPx())
+                if (estilo == KeyStyle.CRISTAL) {
+                    // "Cristal líquido": vidrio translúcido con brillo arriba y borde de luz.
+                    val resaltada = enterAccion || shiftActivo
+                    val vidrio = when {
+                        resaltada -> colorBase.copy(alpha = 0.85f)
+                        presionada -> Color.White.copy(alpha = 0.34f)
+                        else -> Color.White.copy(alpha = 0.14f)
+                    }
+                    drawRoundRect(Color.Black.copy(alpha = 0.16f * opacidad), Offset(0f, 1.5.dp.toPx()), size, cr)
+                    drawRoundRect(vidrio.copy(alpha = vidrio.alpha * opacidad), cornerRadius = cr)
+                    drawRoundRect(
+                        Brush.verticalGradient(
+                            listOf(Color.White.copy(alpha = 0.32f * opacidad), Color.Transparent),
+                            endY = size.height * 0.55f,
+                        ),
+                        cornerRadius = cr,
+                    )
+                    drawRoundRect(
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.65f * opacidad), Color.White.copy(alpha = 0.08f * opacidad))),
+                        cornerRadius = cr,
+                        style = Stroke(1.dp.toPx()),
+                    )
+                    return@drawBehind
+                }
                 val colorRelleno = when (estilo) {
                     KeyStyle.SOLIDA -> relleno.copy(alpha = relleno.alpha * opacidad)
                     KeyStyle.CONTORNO -> relleno.copy(alpha = relleno.alpha * opacidad * (if (presionada || enterAccion || shiftActivo) 0.95f else 0.3f))
                     KeyStyle.MINIMAL -> if (presionada || enterAccion || shiftActivo) relleno.copy(alpha = relleno.alpha * opacidad) else Color.Transparent
+                    KeyStyle.CRISTAL -> Color.Transparent
                 }
                 if (conSombra) {
                     drawRoundRect(th.sombra.copy(alpha = th.sombra.alpha * opacidad), Offset(0f, 1.2.dp.toPx()), size, cr)

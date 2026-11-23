@@ -59,11 +59,12 @@ enum ThemeId: String, Codable, Ciclico, Identifiable {
 }
 
 enum KeyStyle: String, Codable, CaseIterable, Identifiable {
-    case solida, contorno, minimal
+    case solida, cristal, contorno, minimal
     var id: String { rawValue }
     var etiqueta: String {
         switch self {
         case .solida: return "Sólida"
+        case .cristal: return "Cristal"
         case .contorno: return "Contorno"
         case .minimal: return "Minimal"
         }
@@ -182,7 +183,7 @@ extension ThemeId {
     }
 }
 
-extension KeyStyle { var esPremium: Bool { self != .solida } }
+extension KeyStyle { var esPremium: Bool { self == .contorno || self == .minimal } }
 extension BackgroundType { var esPremium: Bool { self != .tema } }
 
 extension KeyboardConfig {
