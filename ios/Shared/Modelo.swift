@@ -160,3 +160,39 @@ final class ConfigStore: ObservableObject {
         }
     }
 }
+
+// MARK: - Premium
+
+enum PremiumFlag {
+    static let productoID = "duokeyboard_premium"
+    private static let clave = "premium_activo"
+    /// La app lo escribe tras verificar la compra; el teclado solo lo lee.
+    static var activo: Bool {
+        get { AppGroup.defaults.bool(forKey: clave) }
+        set { AppGroup.defaults.set(newValue, forKey: clave) }
+    }
+}
+
+extension ThemeId {
+    var esPremium: Bool { self != .iosOscuro && self != .iosClaro }
+    func siguienteDisponible(premium: Bool) -> ThemeId {
+        var t = siguiente
+        while !premium && t.esPremium { t = t.siguiente }
+        return t
+    }
+}
+
+extension KeyStyle { var esPremium: Bool { self != .solida } }
+extension BackgroundType { var esPremium: Bool { self != .tema } }
+
+extension KeyboardConfig {
+    /// Lo que el teclado realmente usa: sin Premium, las opciones de pago vuelven a las gratis.
+    func efectiva(premium: Bool) -> KeyboardConfig {
+        guard !premium else { return self }
+        var c = self
+        if c.tema.esPremium { c.tema = .iosOscuro }
+        if c.estiloTecla.esPremium { c.estiloTecla = .solida }
+        if c.fondoTipo.esPremium { c.fondoTipo = .tema }
+        return c
+    }
+}

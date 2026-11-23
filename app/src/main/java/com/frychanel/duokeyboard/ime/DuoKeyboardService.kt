@@ -26,6 +26,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.frychanel.duokeyboard.data.BackgroundStore
 import com.frychanel.duokeyboard.data.ConfigRepository
+import com.frychanel.duokeyboard.data.Premium
+import com.frychanel.duokeyboard.data.efectiva
 import com.frychanel.duokeyboard.keyboard.DuoKeyboardView
 import com.frychanel.duokeyboard.keyboard.KeyboardController
 import com.frychanel.duokeyboard.settings.SettingsActivity
@@ -63,6 +65,7 @@ class DuoKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreO
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
         ConfigRepository.init(this)
+        Premium.init(this)
         controlador = KeyboardController(
             context = this,
             icProvider = { currentInputConnection },
@@ -89,8 +92,9 @@ class DuoKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreO
             instalarPropietarios(vista)
             vista.setContent {
                 val config by ConfigRepository.config.collectAsState()
+                val premium by Premium.activo.collectAsState()
                 val horizontal = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-                DuoKeyboardView(controlador, config, fondo.value, horizontal)
+                DuoKeyboardView(controlador, config.efectiva(premium), fondo.value, horizontal)
             }
         }
     }

@@ -135,3 +135,25 @@ object ConfigRepository {
 
     fun restablecer() = update { actual -> KeyboardConfig(fondoVersion = actual.fondoVersion + 1) }
 }
+
+// ---------------- Premium ----------------
+
+private val TEMAS_GRATIS = setOf(ThemeId.IOS_OSCURO, ThemeId.IOS_CLARO)
+
+fun ThemeId.esPremium() = this !in TEMAS_GRATIS
+fun KeyStyle.esPremium() = this != KeyStyle.SOLIDA
+fun BackgroundType.esPremium() = this != BackgroundType.TEMA
+
+/** Siguiente tema para el botón de la barra (sin Premium solo recorre los gratis). */
+fun ThemeId.siguienteDisponible(premium: Boolean): ThemeId {
+    var t = siguiente()
+    while (!premium && t.esPremium()) t = t.siguiente()
+    return t
+}
+
+/** Lo que el teclado realmente usa: sin Premium, las opciones de pago vuelven a las gratis. */
+fun KeyboardConfig.efectiva(premium: Boolean): KeyboardConfig = if (premium) this else copy(
+    tema = if (tema.esPremium()) ThemeId.IOS_OSCURO else tema,
+    estiloTecla = if (estiloTecla.esPremium()) KeyStyle.SOLIDA else estiloTecla,
+    fondoTipo = if (fondoTipo.esPremium()) BackgroundType.TEMA else fondoTipo,
+)

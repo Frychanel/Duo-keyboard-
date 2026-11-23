@@ -37,9 +37,10 @@ struct KeyboardView: View {
     var horizontal: Bool
     var ancho: CGFloat
     var esVistaPrevia = false
+    var premium = true
 
     var body: some View {
-        let c = store.config
+        let c = store.config.efectiva(premium: premium)
         let t = Tema.para(c)
         let m = Medidas(config: c, page: state.page, horizontal: horizontal, ancho: ancho,
                         conBarra: c.barraHerramientas || !state.acentos.isEmpty)
@@ -91,7 +92,7 @@ struct KeyboardView: View {
         } else if c.barraHerramientas {
             HStack(spacing: 2) {
                 boton(c.modoTeclado.simbolo, t) { store.config.modoTeclado = store.config.modoTeclado.siguiente }
-                boton("paintpalette", t) { store.config.tema = store.config.tema.siguiente }
+                boton("paintpalette", t) { store.config.tema = store.config.tema.siguienteDisponible(premium: premium) }
                 if c.fondoTipo != .tema {
                     boton(c.fondoOculto ? "eye.slash" : "photo", t) { store.config.fondoOculto.toggle() }
                 }

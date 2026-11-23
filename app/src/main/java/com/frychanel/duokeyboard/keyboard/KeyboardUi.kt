@@ -66,6 +66,8 @@ import com.frychanel.duokeyboard.data.ConfigRepository
 import com.frychanel.duokeyboard.data.KeyStyle
 import com.frychanel.duokeyboard.data.KeyboardConfig
 import com.frychanel.duokeyboard.data.LayoutMode
+import com.frychanel.duokeyboard.data.Premium
+import com.frychanel.duokeyboard.data.siguienteDisponible
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -173,7 +175,7 @@ private fun BarraHerramientas(env: Env) {
         BotonBarra({ ConfigRepository.update { it.copy(modoTeclado = it.modoTeclado.siguiente()) } }) {
             LayoutIcon(cfg.modoTeclado, color, icono)
         }
-        BotonBarra({ ConfigRepository.update { it.copy(tema = it.tema.siguiente()) } }) {
+        BotonBarra({ ConfigRepository.update { it.copy(tema = it.tema.siguienteDisponible(Premium.activo.value || c.esVistaPrevia)) } }) {
             PaletteIcon(color, icono)
         }
         if (cfg.fondoTipo != BackgroundType.TEMA) {

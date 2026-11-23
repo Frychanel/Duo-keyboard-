@@ -10,6 +10,7 @@ struct AjustesView: View {
     @StateObject private var store: ConfigStore
     @StateObject private var estado: KeyboardState
     @StateObject private var prueba = VistaPreviaTexto()
+    @StateObject private var premium = PremiumStore()
     @State private var seccion: Seccion = .activar
     @State private var fondo: UIImage?
 
@@ -69,8 +70,8 @@ struct AjustesView: View {
         switch seccion {
         case .activar: SeccionActivar()
         case .diseno: SeccionDiseno(store: store)
-        case .estilo: SeccionEstilo(store: store)
-        case .fondo: SeccionFondo(store: store)
+        case .estilo: SeccionEstilo(store: store, premium: premium)
+        case .fondo: SeccionFondo(store: store, premium: premium)
         case .teclas: SeccionTeclas(store: store)
         case .escritura: SeccionEscritura(store: store)
         }
@@ -93,6 +94,41 @@ private struct FilaDeslizador: View {
                 Text(formato(valor)).foregroundColor(.accentColor).monospacedDigit()
             }
             Slider(value: $valor, in: rango)
+        }
+    }
+}
+
+/// Marca con ★ las opciones de pago mientras no se haya comprado Premium.
+private func estrella(_ texto: String, _ dePago: Bool, _ premium: Bool) -> String {
+    dePago && !premium ? "\(texto) ★" : texto
+}
+
+private struct TarjetaPremium: View {
+    @ObservedObject var premium: PremiumStore
+    var body: some View {
+        if !premium.activo {
+            Section {
+                Text("Desbloquea 6 temas más (incluido Personal), fondos con tus fotos e imágenes satelitales, y los estilos Contorno y Minimal.")
+                Text("Pruébalos gratis aquí en la vista previa; en el teclado se activan al desbloquear.")
+                    .font(.footnote).foregroundColor(.secondary)
+                Button {
+                    Task { await premium.comprar() }
+                } label: {
+                    HStack {
+                        Spacer()
+                        if premium.comprando { ProgressView() }
+                        Text(premium.precio.map { "Desbloquear · \($0)" } ?? "Desbloquear Premium").bold()
+                        Spacer()
+                    }
+                }
+                .disabled(premium.comprando)
+                Button("Restaurar compra") { Task { await premium.restaurar() } }
+                if let aviso = premium.aviso { Text(aviso).font(.footnote).foregroundColor(.accentColor) }
+            } header: {
+                Text("★ DuoKeyboard Premium")
+            }
+        } else if let aviso = premium.aviso {
+            Section { Text(aviso).foregroundColor(.accentColor) }
         }
     }
 }
@@ -152,6 +188,7 @@ private struct SeccionDiseno: View {
 
 private struct SeccionEstilo: View {
     @ObservedObject var store: ConfigStore
+    @ObservedObject var premium: PremiumStore
 
     private func color(_ ruta: WritableKeyPath<KeyboardConfig, Int>) -> Binding<Color> {
         Binding(get: { Color(rgb: store.config[keyPath: ruta]) },
@@ -159,6 +196,7 @@ private struct SeccionEstilo: View {
     }
 
     var body: some View {
+        TarjetaPremium(premium: premium)
         Section("Tema") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 10)], spacing: 12) {
                 ForEach(ThemeId.allCases) { id in
@@ -178,7 +216,7 @@ private struct SeccionEstilo: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(elegido ? Color.accentColor : Color.white.opacity(0.12), lineWidth: elegido ? 2.5 : 1))
-                            Text(id.etiqueta).font(.caption).foregroundColor(elegido ? .accentColor : .primary)
+                            Text(estrella(id.etiqueta, id.esPremium, premium.activo)).font(.caption).foregroundColor(elegido ? .accentColor : .primary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -188,7 +226,7 @@ private struct SeccionEstilo: View {
         }
         Section("Estilo de tecla") {
             Picker("Estilo", selection: $store.config.estiloTecla) {
-                ForEach(KeyStyle.allCases) { Text($0.etiqueta).tag($0) }
+                ForEach(KeyStyle.allCases) { Text(estrella($0.etiqueta, $0.esPremium, premium.activo)).tag($0) }
             }
             .pickerStyle(.segmented)
         }
@@ -207,6 +245,7 @@ private struct SeccionEstilo: View {
 
 private struct SeccionFondo: View {
     @ObservedObject var store: ConfigStore
+    @ObservedObject var premium: PremiumStore
     @State private var foto: PhotosPickerItem?
     @State private var descargando = false
     @State private var mensaje: String?
@@ -215,9 +254,10 @@ private struct SeccionFondo: View {
     @State private var zoom = 13
 
     var body: some View {
+        TarjetaPremium(premium: premium)
         Section("Tipo de fondo") {
             Picker("Tipo", selection: $store.config.fondoTipo) {
-                ForEach(BackgroundType.allCases) { Text($0.etiqueta).tag($0) }
+                ForEach(BackgroundType.allCases) { Text(estrella($0.etiqueta, $0.esPremium, premium.activo)).tag($0) }
             }
             .pickerStyle(.segmented)
             Toggle("Esconder fondo", isOn: $store.config.fondoOculto)

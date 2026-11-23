@@ -1,5 +1,6 @@
 package com.frychanel.duokeyboard.settings
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -42,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +76,9 @@ import com.frychanel.duokeyboard.data.KeyStyle
 import com.frychanel.duokeyboard.data.KeyboardConfig
 import com.frychanel.duokeyboard.data.LayoutMode
 import com.frychanel.duokeyboard.data.ThemeId
+import com.frychanel.duokeyboard.data.Premium
+import com.frychanel.duokeyboard.data.esPremium
+import com.frychanel.duokeyboard.BuildConfig
 import com.frychanel.duokeyboard.keyboard.DuoKeyboardView
 import com.frychanel.duokeyboard.keyboard.KeyboardController
 import com.frychanel.duokeyboard.keyboard.themeFor
@@ -87,6 +92,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ConfigRepository.init(this)
+        Premium.init(this)
         enableEdgeToEdge()
         setContent { TemaAjustes { PantallaAjustes() } }
     }
@@ -204,6 +210,38 @@ private fun Encabezado(estado: EstadoTeclado) {
 
 private fun pct(v: Float) = "${(v * 100).roundToInt()}%"
 
+/** Marca con ★ las opciones de pago mientras no se haya comprado Premium. */
+private fun estrella(texto: String, dePago: Boolean, premium: Boolean) = if (dePago && !premium) "$texto ★" else texto
+
+@Composable
+private fun TarjetaPremium() {
+    val premium by Premium.activo.collectAsStateWithLifecycle()
+    if (premium) return
+    val precio by Premium.precio.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as? Activity
+    var aviso by remember { mutableStateOf<String?>(null) }
+    Tarjeta("★ DuoKeyboard Premium") {
+        Text("Desbloquea 6 temas más (incluido Personalizado), fondos con tus fotos e imágenes satelitales, y los estilos Contorno y Minimal.")
+        Text(
+            "Pruébalos gratis aquí en la vista previa; en el teclado se activan al desbloquear.",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(
+            onClick = {
+                val ok = activity?.let { Premium.comprar(it) } ?: false
+                if (!ok) aviso = "La tienda aún no está disponible. Intenta más tarde."
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(precio?.let { "Desbloquear · $it" } ?: "Desbloquear Premium") }
+        TextButton(onClick = {
+            Premium.consultarCompras()
+            aviso = "Buscando compras anteriores…"
+        }) { Text("Restaurar compra") }
+        aviso?.let { Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp) }
+    }
+}
+
 // ------------------------------------------------------------------
 // Secciones
 // ------------------------------------------------------------------
@@ -274,15 +312,17 @@ private fun SeccionDiseno(c: KeyboardConfig) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SeccionEstilo(c: KeyboardConfig) {
+    val premium by Premium.activo.collectAsStateWithLifecycle()
+    TarjetaPremium()
     Tarjeta("Tema") {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ThemeId.entries.forEach { id ->
-                MiniaturaTema(c, id, c.tema == id) { ConfigRepository.update { it.copy(tema = id) } }
+                MiniaturaTema(c, id, c.tema == id, estrella(id.etiqueta, id.esPremium(), premium)) { ConfigRepository.update { it.copy(tema = id) } }
             }
         }
     }
     Tarjeta("Estilo de tecla") {
-        Chips(KeyStyle.entries, c.estiloTecla, { it.etiqueta }) { s -> ConfigRepository.update { it.copy(estiloTecla = s) } }
+        Chips(KeyStyle.entries, c.estiloTecla, { estrella(it.etiqueta, it.esPremium(), premium) }) { s -> ConfigRepository.update { it.copy(estiloTecla = s) } }
     }
     if (c.tema == ThemeId.PERSONAL) {
         Tarjeta("Colores personalizados") {
@@ -301,7 +341,7 @@ private fun SeccionEstilo(c: KeyboardConfig) {
 }
 
 @Composable
-private fun MiniaturaTema(c: KeyboardConfig, id: ThemeId, elegido: Boolean, onClick: () -> Unit) {
+private fun MiniaturaTema(c: KeyboardConfig, id: ThemeId, elegido: Boolean, etiqueta: String, onClick: () -> Unit) {
     val t = remember(c, id) { themeFor(c, id) }
     Column(Modifier.width(96.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -325,7 +365,7 @@ private fun MiniaturaTema(c: KeyboardConfig, id: ThemeId, elegido: Boolean, onCl
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text(id.etiqueta, fontSize = 12.sp, color = if (elegido) MaterialTheme.colorScheme.primary else Color.White)
+        Text(etiqueta, fontSize = 12.sp, color = if (elegido) MaterialTheme.colorScheme.primary else Color.White)
     }
 }
 
@@ -369,8 +409,10 @@ private fun SeccionFondo(c: KeyboardConfig) {
         }
     }
 
+    val premium by Premium.activo.collectAsStateWithLifecycle()
+    TarjetaPremium()
     Tarjeta("Tipo de fondo") {
-        Chips(BackgroundType.entries, c.fondoTipo, { it.etiqueta }) { t -> ConfigRepository.update { it.copy(fondoTipo = t) } }
+        Chips(BackgroundType.entries, c.fondoTipo, { estrella(it.etiqueta, it.esPremium(), premium) }) { t -> ConfigRepository.update { it.copy(fondoTipo = t) } }
         Interruptor("Esconder fondo", "Oculta la imagen sin borrarla (también desde la barra del teclado)", c.fondoOculto) { v ->
             ConfigRepository.update { it.copy(fondoOculto = v) }
         }
@@ -466,6 +508,12 @@ private fun SeccionEscritura(c: KeyboardConfig) {
         Interruptor("Punto con doble espacio", activo = c.puntoDobleEspacio) { v -> ConfigRepository.update { it.copy(puntoDobleEspacio = v) } }
         Interruptor("Mover cursor deslizando el espacio", activo = c.cursorEnEspacio) { v -> ConfigRepository.update { it.copy(cursorEnEspacio = v) } }
         Interruptor("Acentos manteniendo la tecla", "Mantén «a» para á, à, ä…", c.acentosLargos) { v -> ConfigRepository.update { it.copy(acentosLargos = v) } }
+    }
+    if (BuildConfig.DEBUG) {
+        val prueba by Premium.modoPrueba.collectAsStateWithLifecycle()
+        Tarjeta("Desarrollo") {
+            Interruptor("Modo prueba: Premium activado", "Solo aparece en versiones de prueba (debug)", prueba) { Premium.activarModoPrueba(it) }
+        }
     }
     OutlinedButton(onClick = { ConfigRepository.restablecer() }, modifier = Modifier.fillMaxWidth()) {
         Text("Restablecer todo")

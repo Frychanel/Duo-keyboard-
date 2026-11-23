@@ -7,6 +7,7 @@ final class Entorno: ObservableObject {
     @Published var ancho: CGFloat = 0
     @Published var horizontal = false
     @Published var fondo: UIImage?
+    @Published var premium = false
 }
 
 struct RaizTeclado: View {
@@ -16,7 +17,7 @@ struct RaizTeclado: View {
 
     var body: some View {
         KeyboardView(state: state, store: store, fondo: entorno.fondo,
-                     horizontal: entorno.horizontal, ancho: entorno.ancho)
+                     horizontal: entorno.horizontal, ancho: entorno.ancho, premium: entorno.premium)
     }
 }
 
@@ -81,6 +82,7 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         store.recargar()
+        entorno.premium = PremiumFlag.activo
         estado.muestraGlobo = needsInputModeSwitchKey
         estado.alIniciar()
         actualizar()
